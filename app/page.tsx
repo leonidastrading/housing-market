@@ -319,7 +319,7 @@ export default async function Page() {
   })();
 
   const fcNorm = d.nyfed ? foreclosureNorm(d.nyfed.foreclosures) : null;
-  const FC_STATES = ["US", "FL", "TX", "AZ", "CA", "NV", "OH"];
+  const FC_STATES = ["US", "FL", "TX", "AZ", "CA", "NV", "OH", "MI"];
   const stateFcKeys = FC_STATES.filter((c) => d.nyfed?.stateForeclosures[c]).map((c, i) => ({
     key: c,
     label: c === "US" ? "US (all)" : c,

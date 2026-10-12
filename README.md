@@ -18,7 +18,7 @@ It refreshes once a day on Vercel and needs no API keys.
 | 5 · Prices | Case-Shiller national YoY, median sales price, median list price | FRED |
 | 6 · Credit stress | Bank mortgage delinquency rate, delinquencies vs. unemployment since 1991, new foreclosures per quarter, mortgages newly 90+ days late across all lenders, foreclosure rates by state | FRED, NY Fed household debt report (Equifax) |
 | 7 · Macro triggers | Unemployment, Sahm rule, jobless claims, 10-year yield, 10y−2y curve, rental vacancy | FRED |
-| Regional drill-down | 16 states and 17 metros: inventory vs. last year and vs. the 2017–19 norm, price cuts, days on market, list prices, state unemployment and FHFA prices, with a region picker for charts | FRED (Realtor.com, BLS, FHFA) |
+| Regional drill-down | 17 states and 17 metros: inventory vs. last year and vs. the 2017–19 norm, price cuts, days on market, list prices, state unemployment and FHFA prices, with a region picker for charts | FRED (Realtor.com, BLS, FHFA) |
 | Florida | Florida metros, household insurance CPI, condo and insurance news | FRED, Google News |
 | News | Six Google News searches over the last 7 days | Google News RSS |
 

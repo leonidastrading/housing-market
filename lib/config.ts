@@ -114,6 +114,7 @@ export const REGIONS: Region[] = [
   { code: "NY", name: "New York", kind: "state", state: "NY" },
   { code: "IL", name: "Illinois", kind: "state", state: "IL" },
   { code: "OH", name: "Ohio", kind: "state", state: "OH" },
+  { code: "MI", name: "Michigan", kind: "state", state: "MI" },
   { code: "33100", name: "Miami", kind: "metro", state: "FL" },
   { code: "45300", name: "Tampa", kind: "metro", state: "FL" },
   { code: "36740", name: "Orlando", kind: "metro", state: "FL" },
