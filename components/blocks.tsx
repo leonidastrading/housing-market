@@ -272,9 +272,17 @@ export function ForcedSellingCard({ f }: { f: ForcedSelling }) {
       </div>
       <p className="muted" style={{ margin: "0 0 10px", fontSize: 13 }}>{c.text}</p>
       <Check on={f.delinquency.rising} label="Mortgage delinquencies">
-        {f.delinquency.value?.toFixed(2)}% · {sgn(f.delinquency.yoy, 2, " pts")} YoY{f.delinquency.qoq2 ? " · up two quarters running" : ""} · {f.delinquency.asOf}
+        Banks: {f.delinquency.value?.toFixed(2)}% · {sgn(f.delinquency.yoy, 2, " pts")} YoY{f.delinquency.qoq2 ? " · up two quarters running" : ""} · {f.delinquency.asOf}
+        {f.delinquency.seriousFlow != null && (
+          <>
+            <br />
+            All lenders: {f.delinquency.seriousFlow.toFixed(2)}% newly 90+ days late · {sgn(f.delinquency.seriousFlowYoY, 2, " pts")} YoY
+            {f.delinquency.foreclosures != null && ` · ${f.delinquency.foreclosures.toFixed(0)}k new foreclosures (${sgn(f.delinquency.foreclosuresYoY, 0, "%")} YoY)`} ·{" "}
+            {f.delinquency.nyfedAsOf}
+          </>
+        )}
         <br />
-        Rising = +0.15 pts YoY or two straight quarterly increases
+        Rising = bank rate +0.15 pts YoY, two straight quarterly increases, or the all-lender 90+ flow +0.25 pts YoY
       </Check>
       <Check on={f.jobs.rising} label="Unemployment">
         Sahm {f.jobs.sahm?.toFixed(2) ?? "—"} · rate {sgn(f.jobs.unrateYoY, 1, " pts")} YoY · claims {sgn(f.jobs.claimsYoY, 0, "%")} YoY · {f.jobs.asOf}

@@ -9,14 +9,14 @@ It refreshes once a day on Vercel and needs no API keys.
 
 | Section | What it shows | Source |
 | --- | --- | --- |
-| Stress level | One gauge: 24 signals, each a z-score vs. its own 10-year history, mapped to 0–100 and weighted toward leading stages. Green < 40, yellow 40–59, red ≥ 60 | derived |
-| Forced-selling check | Flags when mortgage delinquencies and unemployment rise together: the combination that turns a frozen market into a falling one | FRED |
+| Stress level | One gauge: 26 signals, each a z-score vs. its own 10-year history, mapped to 0–100 and weighted toward leading stages. Green < 40, yellow 40–59, red ≥ 60 | derived |
+| Forced-selling check | Flags when mortgage delinquencies and unemployment rise together: the combination that turns a frozen market into a falling one | FRED, NY Fed |
 | 1 · Financing | 30-year mortgage rate, mortgage spread over the 10-year, Fed senior loan officer survey (tightening and demand) | FRED (Freddie Mac, Fed) |
 | 2 · Builders | Builder stocks vs. S&P, ITB/SPY ratio, NAHB builder sentiment with the share of builders cutting prices and using incentives, cancellation and incentive table from earnings | Yahoo Finance, NAHB, `data/builders.json` |
 | 3 · Demand & supply | New home sales, months' supply, existing sales, active and new listings, price-cut share, days on market, starts, permits | FRED (Census, NAR, Realtor.com) |
 | 4 · Affordability | Payment on the median home as a share of median income, price-to-income, price-to-rent | derived from FRED |
 | 5 · Prices | Case-Shiller national YoY, median sales price, median list price | FRED |
-| 6 · Credit stress | Mortgage delinquency rate, delinquencies vs. unemployment since 1991 | FRED |
+| 6 · Credit stress | Bank mortgage delinquency rate, delinquencies vs. unemployment since 1991, new foreclosures per quarter, mortgages newly 90+ days late across all lenders, foreclosure rates by state | FRED, NY Fed household debt report (Equifax) |
 | 7 · Macro triggers | Unemployment, Sahm rule, jobless claims, 10-year yield, 10y−2y curve, rental vacancy | FRED |
 | Regional drill-down | 16 states and 17 metros: inventory vs. last year and vs. the 2017–19 norm, price cuts, days on market, list prices, state unemployment and FHFA prices, with a region picker for charts | FRED (Realtor.com, BLS, FHFA) |
 | Florida | Florida metros, household insurance CPI, condo and insurance news | FRED, Google News |
@@ -29,7 +29,7 @@ Series, regions and news queries live in `lib/config.ts`; signal definitions and
 - Each signal is transformed where needed (year-over-year change for seasonal series such as listings, a ratio for ITB/SPY, a spread for mortgage minus 10-year), then z-scored against its last 10 years of monthly observations. The sign is flipped where lower is worse, so a positive z always means more stress.
 - z maps to 0–100: −1σ → 0, 0 → 33, +1σ → 67, +2σ → 100.
 - Signals average within each stage; stages average with weights: financing and builders 1.5×, demand & inventory 1.25×, prices 0.75×, the rest 1×.
-- Three signals use fixed thresholds instead: the Sahm rule and jobless claims (the 2020 spike swamps a 10-year σ) and NAHB's price-cut share (no published history). The table shows each signal's basis.
+- Five signals use fixed thresholds instead: the Sahm rule and jobless claims (the 2020 spike swamps a 10-year σ), new foreclosures and the 90+ flow (2020–21 moratoriums and forbearance), and NAHB's price-cut share (no published history). The table shows each signal's basis.
 - Regions use fixed thresholds too; Realtor.com local data starts in 2016.
 
 ## Updating the builder table
@@ -38,7 +38,7 @@ Series, regions and news queries live in `lib/config.ts`; signal definitions and
 
 ## Not automated
 
-MBA weekly purchase applications, FHA delinquencies (MBA National Delinquency Survey) and ATTOM foreclosure starts are paywalled. The page covers them with news feeds and uses the Fed's bank-reported mortgage demand as a free proxy for purchase applications.
+MBA weekly purchase applications, FHA delinquencies (MBA National Delinquency Survey) and ATTOM monthly foreclosure filings are paywalled. Foreclosures come instead from the New York Fed's free quarterly household debt report (people with a new foreclosure on their credit report); the fetcher picks up each new report automatically. The page covers them with news feeds and uses the Fed's bank-reported mortgage demand as a free proxy for purchase applications.
 
 ## How the daily refresh works
 

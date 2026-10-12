@@ -4,6 +4,7 @@ import { appendSnapshot, readHistory, type Snapshot } from "./history";
 import { mapLimit, settle } from "./http";
 import { fetchNahb, type Nahb } from "./nahb";
 import { fetchNews, type NewsItem } from "./news";
+import { fetchNyFed, type NyFed } from "./nyfed";
 import { fetchRegions, type RegionRow } from "./regions";
 import { change, combine, quarterlyMean, rollingMean, round, valueAt } from "./series";
 import {
@@ -28,6 +29,7 @@ export type DashboardData = {
   derived: Derived;
   quotes: Record<string, Quote>;
   nahb: Nahb | null;
+  nyfed: NyFed | null;
   regions: RegionRow[];
   news: { id: string; title: string; items: NewsItem[] }[];
   history: Snapshot[];
@@ -110,11 +112,12 @@ function derive(fred: Map<string, FredData>, itbW: Quote | null, spyW: Quote | n
 export async function getDashboardData(): Promise<DashboardData> {
   const errors: string[] = [];
 
-  const [fredResults, quoteResults, weeklyResults, nahbR, newsResults, regions, history] = await Promise.all([
+  const [fredResults, quoteResults, weeklyResults, nahbR, nyfedR, newsResults, regions, history] = await Promise.all([
     mapLimit(FRED_SERIES, 4, (f) => settle(fetchFred(f.id, f.years))),
     mapLimit(BUILDERS.tickers, 4, (t) => settle(fetchQuote(t.symbol, t.name))),
     mapLimit(["ITB", "SPY"], 2, (s) => settle(fetchQuote(s, s, "11y", "1wk"))),
     settle(fetchNahb()),
+    settle(fetchNyFed()),
     mapLimit(NEWS_FEEDS, 3, (f) => settle(fetchNews(f.query))),
     fetchRegions(errors),
     readHistory(),
@@ -138,6 +141,8 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   if (!nahbR.ok) errors.push(`NAHB HMI: ${nahbR.error}`);
   const nahb = nahbR.ok ? nahbR.data : null;
+  if (!nyfedR.ok) errors.push(`NY Fed household debt report: ${nyfedR.error}`);
+  const nyfed = nyfedR.ok ? nyfedR.data : null;
 
   const news = NEWS_FEEDS.map((f, i) => {
     const r = newsResults[i];
@@ -146,7 +151,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   });
 
   const derived = derive(fred, itbW, spyW);
-  const signals = computeSignals(fred, derived, nahb);
+  const signals = computeSignals(fred, derived, nahb, nyfed);
   const stages = stageScores(signals);
 
   return {
@@ -154,11 +159,12 @@ export async function getDashboardData(): Promise<DashboardData> {
     score: compositeScore(stages),
     stages,
     signals,
-    forced: forcedSelling(fred, derived.claims4w),
+    forced: forcedSelling(fred, derived.claims4w, nyfed),
     fred: Object.fromEntries(fred),
     derived,
     quotes,
     nahb,
+    nyfed,
     regions,
     news,
     history,

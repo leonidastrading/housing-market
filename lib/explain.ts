@@ -131,6 +131,21 @@ export const EXPLAIN: Record<string, Explanation> = {
     why: "The crash confirmation. Banks hold mostly prime loans, so this moves late. FHA delinquencies (MBA, not free) crack first.",
     watch: "Two straight quarterly increases, or +0.15 points year over year, together with rising unemployment.",
   },
+  foreclosures: {
+    what: "Number of people with a new foreclosure on their credit report each quarter, in thousands (New York Fed Consumer Credit Panel/Equifax).",
+    why: "Foreclosures turn delinquent borrowers into forced sellers and add distressed supply. They peaked near 550k a quarter in 2009 and nearly vanished during the 2020–21 moratoriums.",
+    watch: "A climb back above the 2017–19 average with year-over-year growth over 25%. Foreclosures lag delinquencies by several quarters.",
+  },
+  seriousFlow: {
+    what: "Annualized share of mortgage balances that became 90+ days delinquent in the quarter, across all lenders (NY Fed/Equifax).",
+    why: "Broader than the bank-only delinquency rate: it includes FHA, VA and non-bank loans, where stress shows first.",
+    watch: "A rise of a quarter point or more from a year earlier. It ran near 1% in 2017–19 and above 8% in 2009.",
+  },
+  stateForeclosures: {
+    what: "Share of consumers with a new foreclosure in the quarter, for the states the NY Fed reports (dashed: US).",
+    why: "Busts start local. In 2007–09 Nevada, Arizona, Florida and California led by a wide margin.",
+    watch: "Florida or Texas pulling away from the national line.",
+  },
   combo: {
     what: "Mortgage delinquency rate (left) and unemployment rate (right) since 1991.",
     why: "2008 was forced selling: job losses plus bad loans meeting falling prices. Both lines rose together from 2007.",

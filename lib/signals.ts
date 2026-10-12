@@ -1,6 +1,7 @@
 import { STAGES, type StageId } from "./config";
 import type { FredData } from "./fred";
 import type { Nahb } from "./nahb";
+import type { NyFed } from "./nyfed";
 import { last, yoy, zScore } from "./series";
 import type { Point } from "./yahoo";
 
@@ -41,7 +42,7 @@ const scale = (v: number, calm: number, stress: number) => Math.round(clamp(((v 
 
 const sign = (n: number, d = 1) => `${n >= 0 ? "+" : ""}${n.toFixed(d)}`;
 
-export function computeSignals(fred: Map<string, FredData>, derived: Derived, nahb: Nahb | null): Signal[] {
+export function computeSignals(fred: Map<string, FredData>, derived: Derived, nahb: Nahb | null, nyfed: NyFed | null): Signal[] {
   const out: Signal[] = [];
 
   /** Score a series by its latest value's z-score vs. its own last 10 years. */
@@ -131,6 +132,13 @@ export function computeSignals(fred: Map<string, FredData>, derived: Derived, na
   const dq = pts("DRSFRMACBS");
   z("delinquency", "credit", "Mortgage delinquency rate", dq, 1, pct(2), "Single-family mortgages 30+ days past due at commercial banks, quarterly. Bank loans skew prime, so this moves late.", 1);
   z("delinquencyYoY", "credit", "Delinquency change (YoY)", yoy(dq ?? [], "diff", 40), 1, pts1, "Change in the delinquency rate vs a year earlier. Direction matters more than level.", 1);
+  // NY Fed credit-panel data: 2020–21 forbearance and foreclosure moratoriums distort a 10-year z, so fixed levels.
+  if (nyfed) {
+    const norm = foreclosureNorm(nyfed.foreclosures);
+    const fc = last(nyfed.foreclosures);
+    fixed("foreclosuresYoY", "credit", "New foreclosures (YoY)", yoy(nyfed.foreclosures, "pct", 40), 0, 40, pctChg, `Consumers with a new foreclosure on their credit report (NY Fed/Equifax), quarterly.${fc ? ` ${fc.v.toFixed(0)}k in the latest quarter` : ""}${fc && norm ? `, ${sign((fc.v / norm - 1) * 100, 0)}% vs the 2017–19 average of ${norm.toFixed(0)}k` : ""}.`, 1);
+    fixed("seriousFlow", "credit", "Mortgages newly 90+ days late", nyfed.mortgageSeriousFlow, 1, 3, pct(2), "Annualized share of mortgage balances moving into serious delinquency (NY Fed/Equifax). Covers all lenders, including FHA and non-bank loans that the bank series misses.", 1);
+  }
 
   // ── 7. Macro triggers ──
   // The 2020 spike swamps a 10-year standard deviation for these two, so they use fixed levels.
@@ -176,16 +184,36 @@ export function scoreLabel(score: number): { label: string; tone: "calm" | "watc
  */
 export type ForcedSelling = {
   status: "frozen" | "watch" | "alarm";
-  delinquency: { rising: boolean; value: number | null; yoy: number | null; qoq2: boolean; asOf: string | null };
+  delinquency: {
+    rising: boolean;
+    value: number | null;
+    yoy: number | null;
+    qoq2: boolean;
+    asOf: string | null;
+    seriousFlow: number | null;
+    seriousFlowYoY: number | null;
+    foreclosures: number | null; // thousands, latest quarter
+    foreclosuresYoY: number | null;
+    nyfedAsOf: string | null;
+  };
   jobs: { rising: boolean; sahm: number | null; unrateYoY: number | null; claimsYoY: number | null; asOf: string | null };
 };
 
-export function forcedSelling(fred: Map<string, FredData>, claims4w: Point[]): ForcedSelling {
+/** Average new foreclosures per quarter in 2017–19, the last stretch before moratoriums. */
+export function foreclosureNorm(points: Point[]): number | null {
+  const xs = points.filter((p) => p.t >= "2017" && p.t < "2020").map((p) => p.v);
+  return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+}
+
+export function forcedSelling(fred: Map<string, FredData>, claims4w: Point[], nyfed: NyFed | null): ForcedSelling {
   const dq = fred.get("DRSFRMACBS")?.points ?? [];
   const dqYoY = last(yoy(dq, "diff", 40))?.v ?? null;
   const n = dq.length;
   const qoq2 = n >= 3 && dq[n - 1].v > dq[n - 2].v && dq[n - 2].v > dq[n - 3].v;
-  const delinqRising = (dqYoY != null && dqYoY >= 0.15) || qoq2;
+  const flow = nyfed?.mortgageSeriousFlow ?? [];
+  const flowYoY = last(yoy(flow, "diff", 40))?.v ?? null;
+  const fcYoY = nyfed ? (last(yoy(nyfed.foreclosures, "pct", 40))?.v ?? null) : null;
+  const delinqRising = (dqYoY != null && dqYoY >= 0.15) || qoq2 || (flowYoY != null && flowYoY >= 0.25);
 
   const sahm = fred.get("SAHMREALTIME")?.last ?? null;
   const ur = fred.get("UNRATE");
@@ -195,7 +223,18 @@ export function forcedSelling(fred: Map<string, FredData>, claims4w: Point[]): F
 
   return {
     status: delinqRising && jobsRising ? "alarm" : delinqRising || jobsRising ? "watch" : "frozen",
-    delinquency: { rising: delinqRising, value: last(dq)?.v ?? null, yoy: dqYoY, qoq2, asOf: last(dq)?.t ?? null },
+    delinquency: {
+      rising: delinqRising,
+      value: last(dq)?.v ?? null,
+      yoy: dqYoY,
+      qoq2,
+      asOf: last(dq)?.t ?? null,
+      seriousFlow: last(flow)?.v ?? null,
+      seriousFlowYoY: flowYoY,
+      foreclosures: nyfed ? (last(nyfed.foreclosures)?.v ?? null) : null,
+      foreclosuresYoY: fcYoY,
+      nyfedAsOf: last(flow)?.t ?? null,
+    },
     jobs: { rising: jobsRising, sahm, unrateYoY, claimsYoY, asOf: ur?.lastDate ?? null },
   };
 }

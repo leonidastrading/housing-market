@@ -10,6 +10,7 @@ import type { FredData } from "@/lib/fred";
 import { historyEnabled } from "@/lib/history";
 import { REGION_SCALES, type RegionRow } from "@/lib/regions";
 import { yoy } from "@/lib/series";
+import { foreclosureNorm } from "@/lib/signals";
 import { stressColor, toScore } from "@/lib/stress-color";
 import type { Point } from "@/lib/yahoo";
 
@@ -213,7 +214,12 @@ function Scored({ v, k, fmt }: { v: number | null; k: keyof typeof REGION_SCALES
 
 const sg = (d = 1, suffix = "%") => (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(d)}${suffix}`;
 
-function RegionTable({ rows, storageKey }: { rows: RegionRow[]; storageKey: string }) {
+function RegionTable({ rows, storageKey, foreclosures }: { rows: RegionRow[]; storageKey: string; foreclosures?: Record<string, Point[]> }) {
+  const fc = (code: string) => {
+    const pts = foreclosures?.[code];
+    if (!pts?.length) return null;
+    return { v: pts[pts.length - 1].v, yoy: yoy(pts, "diff", 40).at(-1)?.v ?? null };
+  };
   return (
     <SortableTable
       storageKey={storageKey}
@@ -228,11 +234,14 @@ function RegionTable({ rows, storageKey }: { rows: RegionRow[]; storageKey: stri
         { label: "List price YoY", firstDir: "asc" },
         { label: "Unemp. YoY", title: "State unemployment rate change vs a year ago", firstDir: "desc" },
         { label: "FHFA HPI YoY", title: "FHFA all-transactions index, quarterly", firstDir: "asc" },
+        ...(foreclosures
+          ? [{ label: "Foreclosures", title: "Share of consumers with a new foreclosure this quarter (NY Fed/Equifax; covers 11 states), and change vs a year ago", firstDir: "desc" as const }]
+          : []),
       ]}
       rows={rows.map((r) => ({
         key: r.code,
         title: `Realtor.com data as of ${r.asOf ?? "—"}${r.hpiAsOf ? `; FHFA as of ${r.hpiAsOf}` : ""}`,
-        sort: [r.name, r.score, r.listingsYoY, r.vsPrePandemic, r.newListingsYoY, r.cutShareYoY, r.domYoY, r.listPriceYoY, r.unemploymentYoY, r.hpiYoY],
+        sort: [r.name, r.score, r.listingsYoY, r.vsPrePandemic, r.newListingsYoY, r.cutShareYoY, r.domYoY, r.listPriceYoY, r.unemploymentYoY, r.hpiYoY, ...(foreclosures ? [fc(r.code)?.v ?? null] : [])],
         cells: [
           <>
             <span className="sym">{r.name}</span>
@@ -261,6 +270,22 @@ function RegionTable({ rows, storageKey }: { rows: RegionRow[]; storageKey: stri
           <Scored v={r.listPriceYoY} k="listPriceYoY" fmt={sg(1)} />,
           <Scored v={r.unemploymentYoY} k="unemploymentYoY" fmt={sg(1, "")} />,
           <Scored v={r.hpiYoY} k="hpiYoY" fmt={sg(1)} />,
+          ...(foreclosures
+            ? [
+                (() => {
+                  const f = fc(r.code);
+                  if (!f) return <span className="faint">—</span>;
+                  return (
+                    <>
+                      {f.v.toFixed(3)}%{" "}
+                      {f.yoy != null && (
+                        <span style={{ color: f.yoy > 0.003 ? stressColor(toScore(f.yoy, 0, 0.02)) : "var(--muted)" }}>({sg(3, "")(f.yoy)})</span>
+                      )}
+                    </>
+                  );
+                })(),
+              ]
+            : []),
         ],
       }))}
     />
@@ -291,6 +316,21 @@ export default async function Page() {
   const comboRows = (() => {
     const ur = new Map((d.fred.UNRATE?.points ?? []).map((p) => [p.t, p.v]));
     return (d.fred.DRSFRMACBS?.points ?? []).map((p) => ({ t: p.t, dq: p.v, ur: ur.get(p.t) ?? null }));
+  })();
+
+  const fcNorm = d.nyfed ? foreclosureNorm(d.nyfed.foreclosures) : null;
+  const FC_STATES = ["US", "FL", "TX", "AZ", "CA", "NV", "OH"];
+  const stateFcKeys = FC_STATES.filter((c) => d.nyfed?.stateForeclosures[c]).map((c, i) => ({
+    key: c,
+    label: c === "US" ? "US (all)" : c,
+    color: c === "US" ? "var(--faint)" : `var(--s${i || 1})`,
+    dash: c === "US",
+  }));
+  const stateFcRows = (() => {
+    const m = new Map<string, Record<string, number | string | null>>();
+    for (const k of stateFcKeys)
+      for (const p of d.nyfed?.stateForeclosures[k.key] ?? []) m.set(p.t, { ...(m.get(p.t) ?? { t: p.t }), [k.key]: p.v });
+    return [...m.values()].sort((a, b) => String(a.t).localeCompare(String(b.t)));
   })();
 
   const csYoY = yoy(d.fred.CSUSHPINSA?.points ?? []).map((p) => ({ t: p.t, v: +p.v.toFixed(2) }));
@@ -568,11 +608,38 @@ export default async function Page() {
             />
           </Card>
           {fc("DRSFRMACBS")}
+          <DerivedCard
+            title="New foreclosures per quarter (thousands)"
+            points={d.nyfed?.foreclosures ?? []}
+            explain="foreclosures"
+            refs={fcNorm ? [{ y: +fcNorm.toFixed(0), label: "2017–19 avg", tone: "watch" }] : undefined}
+            long
+            sub={d.nyfed ? `NY Fed report ${d.nyfed.report.toUpperCase()}` : undefined}
+          />
+          <DerivedCard
+            title="Mortgages newly 90+ days late, all lenders"
+            points={d.nyfed?.mortgageSeriousFlow ?? []}
+            unit="%"
+            explain="seriousFlow"
+            long
+          />
+          <Card title="New foreclosures by state" sub="Share of consumers with a new foreclosure in the quarter (NY Fed/Equifax)" explain="stateForeclosures">
+            <LinesChart
+              rows={stateFcRows}
+              keys={stateFcKeys}
+              unit="%"
+              decimals={3}
+              ranges={["5Y", "10Y", "25Y"]}
+              defaultRange="25Y"
+              storageKey="nyfed:states"
+              height={260}
+            />
+          </Card>
         </div>
         <p className="note">
-          Not automated: FHA delinquencies (MBA National Delinquency Survey, paywalled; FHA borrowers have the thinnest cushions and
-          crack first) and foreclosure starts (ATTOM, monthly; press releases are free). Both show up in the &ldquo;Delinquencies &
-          foreclosures&rdquo; news feed.
+          Foreclosures here count people with a new foreclosure on their credit report, a close stand-in for foreclosure starts. Not
+          automated: FHA delinquencies (MBA National Delinquency Survey, paywalled; FHA borrowers have the thinnest cushions and crack
+          first) and ATTOM&apos;s monthly foreclosure filings. Both show up in the &ldquo;Delinquencies & foreclosures&rdquo; news feed.
         </p>
       </section>
 
@@ -597,7 +664,7 @@ export default async function Page() {
         </p>
         <div className="card">
           <h3>States</h3>
-          <RegionTable rows={stateRows} storageKey="table:states" />
+          <RegionTable rows={stateRows} storageKey="table:states" foreclosures={d.nyfed?.stateForeclosures} />
         </div>
         <div className="card" style={{ marginTop: 14 }}>
           <h3>Metros, most stressed first</h3>
@@ -618,7 +685,7 @@ export default async function Page() {
         </p>
         <div className="card">
           <h3>Florida metros</h3>
-          <RegionTable rows={flRows} storageKey="table:florida" />
+          <RegionTable rows={flRows} storageKey="table:florida" foreclosures={d.nyfed?.stateForeclosures} />
         </div>
         <div className="grid g2" style={{ marginTop: 14 }}>
           <FredCard
