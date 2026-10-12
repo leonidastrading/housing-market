@@ -1,0 +1,70 @@
+{
+  "reviewed": "2026-10-12",
+  "note": "Latest reported quarter per builder. Cancellation definitions differ: most report cancellations as a share of gross orders; PulteGroup reports them as a share of beginning backlog, which reads lower. Incentives are a share of revenue or sales price as each company reports them.",
+  "builders": [
+    {
+      "symbol": "DHI",
+      "name": "D.R. Horton",
+      "quarter": "FQ3 2026",
+      "periodEnd": "2026-06-30",
+      "reported": "2026-07-21",
+      "cancellation": 20,
+      "cancellationPrior": 17,
+      "cancellationBasis": "gross orders",
+      "incentives": null,
+      "incentivesPrior": null,
+      "grossMargin": null,
+      "grossMarginPrior": null,
+      "comment": "Net orders flat YoY at 23,084. Expects incentives to stay elevated in FQ4.",
+      "source": "https://investor.drhorton.com/~/media/Files/D/D-R-Horton-IR/press-release/dhi-q3-2026-earnings-release.pdf"
+    },
+    {
+      "symbol": "LEN",
+      "name": "Lennar",
+      "quarter": "FQ3 2026",
+      "periodEnd": "2026-08-31",
+      "reported": "2026-09-17",
+      "cancellation": 15,
+      "cancellationPrior": null,
+      "cancellationBasis": "gross orders (press summary)",
+      "incentives": 12.0,
+      "incentivesPrior": 14.3,
+      "grossMargin": 15.8,
+      "grossMarginPrior": 17.5,
+      "comment": "New orders −9% YoY. Cut 2026 delivery target to 80–81k. FQ4 margin guide 15.5–16%.",
+      "source": "https://www.marketbeat.com/instant-alerts/transcript-lennar-q3-earnings-call-highlights-2026-09-17/"
+    },
+    {
+      "symbol": "PHM",
+      "name": "PulteGroup",
+      "quarter": "Q2 2026",
+      "periodEnd": "2026-06-30",
+      "reported": "2026-07-22",
+      "cancellation": 11,
+      "cancellationPrior": null,
+      "cancellationBasis": "beginning backlog",
+      "incentives": 10.4,
+      "incentivesPrior": 10.9,
+      "grossMargin": 25.0,
+      "grossMarginPrior": 27.0,
+      "comment": "Net new orders +6%. Incentives prior figure is Q1 2026 (sequential). West remains soft.",
+      "source": "https://www.marketbeat.com/instant-alerts/pultegroup-q2-earnings-call-highlights-2026-07-22/"
+    },
+    {
+      "symbol": "KBH",
+      "name": "KB Home",
+      "quarter": "FQ3 2026",
+      "periodEnd": "2026-08-31",
+      "reported": "2026-09-22",
+      "cancellation": 18,
+      "cancellationPrior": 17,
+      "cancellationBasis": "gross orders",
+      "incentives": null,
+      "incentivesPrior": null,
+      "grossMargin": null,
+      "grossMarginPrior": null,
+      "comment": "Net orders −12%; cancellations up from 12% in each of the two prior quarters. Management: conditions weakened since June.",
+      "source": "https://s21.q4cdn.com/462588783/files/doc_news/KB-HOME-REPORTS-2026-THIRD-QUARTER-RESULTS-2026.pdf"
+    }
+  ]
+}
